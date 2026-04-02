@@ -234,9 +234,9 @@ class helper_plugin_acknowledge extends Plugin
         $assignees = '';
 
         // find all patterns that match the page and add the configured assignees
-        foreach ($patterns as $pattern => $assignees) {
+        foreach ($patterns as $pattern => $assign) {
             if ($this->matchPagePattern($pattern, $page)) {
-                $assignees .= ',' . $assignees;
+                $assignees .= ',' . $assign;
             }
         }
 

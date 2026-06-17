@@ -52,23 +52,18 @@ class NotificationIntegrationTest extends DokuWikiTest
         $this->approve = plugin_load('helper', 'approve_db');
         $this->approve->addMaintainer('approved:**', 'someapprover');
 
-        // due (never acked), current (acked >= lastmod), outdated (acked < lastmod)
-        $pages = "REPLACE INTO pages(page,lastmod)
-            VALUES ('wiki:due_new', 1000),
-            ('wiki:done', 1000),
-            ('wiki:outdated', 2000)";
-        $this->db->exec($pages);
+        // due (never acked), current (acked >= lastmod), outdated (acked < lastmod).
+        // These are virtual pages with no changelog, so storePageDate() simply records the lastmod.
+        $this->helper->storePageDate('wiki:due_new', 1000, '');
+        $this->helper->storePageDate('wiki:done', 1000, '');
+        $this->helper->storePageDate('wiki:outdated', 2000, '');
 
-        $assignments = "REPLACE INTO assignments(page,pageassignees)
-            VALUES ('wiki:due_new', '@staff'),
-            ('wiki:done', '@staff'),
-            ('wiki:outdated', '@staff')";
-        $this->db->exec($assignments);
+        $this->helper->setPageAssignees('wiki:due_new', '@staff');
+        $this->helper->setPageAssignees('wiki:done', '@staff');
+        $this->helper->setPageAssignees('wiki:outdated', '@staff');
 
-        $acks = "REPLACE INTO acks(page,user,ack)
-            VALUES ('wiki:done', 'alice', 2000),
-            ('wiki:outdated', 'alice', 1000)";
-        $this->db->exec($acks);
+        $this->helper->importAcknowledgement('wiki:done', 'alice', 2000);
+        $this->helper->importAcknowledgement('wiki:outdated', 'alice', 1000);
     }
 
     /**
@@ -127,7 +122,7 @@ class NotificationIntegrationTest extends DokuWikiTest
         $this->assertContains('wiki:due_new:1000', $before);
 
         // simulate a page edit bumping the stored modification date
-        $this->db->exec("UPDATE pages SET lastmod = 1500 WHERE page = 'wiki:due_new'");
+        $this->helper->storePageDate('wiki:due_new', 1500, 'edited');
 
         $after = array_column($this->gather('alice'), 'id');
         $this->assertContains('wiki:due_new:1500', $after);
@@ -143,9 +138,7 @@ class NotificationIntegrationTest extends DokuWikiTest
         $this->assertContains('wiki:due_new:1000', $before);
 
         // rule churn: widen the assignees but leave lastmod untouched
-        $this->db->exec(
-            "REPLACE INTO assignments(page,pageassignees) VALUES ('wiki:due_new', '@staff,@other')"
-        );
+        $this->helper->setPageAssignees('wiki:due_new', '@staff,@other');
 
         $after = array_column($this->gather('alice'), 'id');
         $this->assertContains('wiki:due_new:1000', $after);
@@ -172,8 +165,10 @@ class NotificationIntegrationTest extends DokuWikiTest
         $this->approve->handlePageEdit($id);
         $lastmod = (int) @filemtime(wikiFN($id));
 
+        // real saved page: pin the pages row to the exact filemtime directly, since
+        // storePageDate() would compare content and may skip the write
         $this->db->exec("REPLACE INTO pages(page,lastmod) VALUES (?, ?)", [$id, $lastmod]);
-        $this->db->exec("REPLACE INTO assignments(page,pageassignees) VALUES (?, '@staff')", [$id]);
+        $this->helper->setPageAssignees($id, '@staff');
 
         // still a draft -> blocked -> not notified
         $ids = array_column($this->gather('alice'), 'id');

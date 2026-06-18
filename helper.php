@@ -616,6 +616,73 @@ class helper_plugin_acknowledge extends Plugin
     }
 
     /**
+     * Aggregate acknowledgement statistics as a drill-down into a namespace, plus a wiki-wide
+     * total.
+     *
+     * @param string $ns namespace to drill into ('' = wiki root / top level)
+     * @return array {
+     *     namespaces: array<string, array{required:int, acked:int, pages:int, haschildren:bool}>,
+     *         keyed by the immediate child namespace within $ns ('' = root pages),
+     *     total: array{required:int, acked:int, pages:int} wiki-wide total
+     * }
+     */
+    public function getStatistics($ns = '')
+    {
+        $depth = $ns === '' ? 0 : count(explode(':', $ns));
+
+        $sql = "SELECT page FROM assignments WHERE TRIM(pageassignees || autoassignees) != ''";
+        $pages = $this->db->queryAll($sql);
+
+        $namespaces = [];
+        $total = ['required' => 0, 'acked' => 0, 'pages' => 0];
+
+        foreach ($pages as $row) {
+            $page = $row['page'];
+
+            $acknowledgements = $this->getPageAcknowledgements($page);
+            $required = count($acknowledgements);
+            if (!$required) continue;
+
+            $acked = 0;
+            foreach ($acknowledgements as $ack) {
+                if ($ack['ack'] !== null && $ack['ack'] >= $ack['lastmod']) {
+                    $acked++;
+                }
+            }
+
+            // total is always wiki-wide
+            $total['required'] += $required;
+            $total['acked'] += $acked;
+            $total['pages'] += 1;
+
+            $pageNS = getNS($page);
+            $pageNS = ($pageNS === false) ? '' : $pageNS;
+
+            // not in a namespace, or in current ns or it's subnamespaces
+            $inScope = $ns === '' || $pageNS === $ns || str_starts_with($pageNS . ':', $ns . ':');
+            if (!$inScope) continue;
+
+            // group namespaces
+            $segments = $pageNS === '' ? [] : explode(':', $pageNS);
+            $key = implode(':', array_slice($segments, 0, $depth + 1));
+
+            if (!isset($namespaces[$key])) {
+                $namespaces[$key] = ['required' => 0, 'acked' => 0, 'pages' => 0, 'haschildren' => false];
+            }
+            $namespaces[$key]['required'] += $required;
+            $namespaces[$key]['acked'] += $acked;
+            $namespaces[$key]['pages'] += 1;
+            if (count($segments) > $depth + 1) {
+                $namespaces[$key]['haschildren'] = true;
+            }
+        }
+
+        ksort($namespaces);
+
+        return ['namespaces' => $namespaces, 'total' => $total];
+    }
+
+    /**
      * Returns a filter clause for acknowledgement queries depending on wanted status.
      *
      * @param string $status

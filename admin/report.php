@@ -269,6 +269,12 @@ class admin_plugin_acknowledge_report extends AdminPlugin
                 ''
             ),
             html_mktocitem(
+                wl($ID, ['do' => 'admin', 'page' => 'acknowledge_stats']),
+                $this->getLang('menu_stats'),
+                0,
+                ''
+            ),
+            html_mktocitem(
                 wl($ID, ['do' => 'admin', 'page' => 'acknowledge_assign']),
                 $this->getLang('menu_assign'),
                 0,

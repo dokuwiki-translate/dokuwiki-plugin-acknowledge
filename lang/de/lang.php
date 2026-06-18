@@ -8,6 +8,7 @@
 // menu entry for admin plugins
 $lang['menu'] = 'Bestätigungen: Überblick';
 $lang['menu_assign'] = 'Bestätigungen: Zuweisungen';
+$lang['menu_stats'] = 'Bestätigungen: Statistik';
 
 // custom language strings for the plugin
 $lang['ackRequired'] = 'Sie müssen diese Seite noch bestätigen';
@@ -34,6 +35,18 @@ $lang['status'] = 'Status';
 $lang['all'] = 'alle';
 $lang['current'] = 'aktuell';
 $lang['due'] = 'offen';
+
+$lang['toomanyresults'] = 'Zu viele Ergebnisse. Die Ausgabe wurde begrenzt.';
+
+$lang['statsTotal'] = 'Gesamtes Wiki';
+$lang['statsNamespace'] = 'Namensraum';
+$lang['statsSubnamespace'] = 'Sub-Namensräume';
+$lang['statsRoot'] = '(oberste Ebene)';
+$lang['statsHere'] = '(Seiten in diesem Namensraum)';
+$lang['statsAcked'] = 'Bestätigt';
+$lang['statsRequired'] = 'Erforderlich';
+$lang['statsRatio'] = 'Fortschritt';
+$lang['statsPages'] = 'Zugewiesene Seiten';
 
 $lang['pattern'] = 'Seiten-Muster';
 $lang['assignees'] = 'Zuweisung';

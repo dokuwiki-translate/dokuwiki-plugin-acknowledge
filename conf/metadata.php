@@ -9,3 +9,4 @@
 
 $meta['approve_integration'] = ['onoff'];
 $meta['notification_integration'] = ['onoff'];
+$meta['onpage_report'] = ['multichoice', '_choices' => ['off', 'acknowledged', 'pending', 'both']];

@@ -9,3 +9,4 @@
 
 $conf['approve_integration'] = 1;
 $conf['notification_integration'] = 1;
+$conf['onpage_report'] = 'off';

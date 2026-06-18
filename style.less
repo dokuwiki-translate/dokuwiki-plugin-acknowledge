@@ -1,3 +1,6 @@
+@check-ok-color: #355723;
+@check-needed-color: #840705;
+
 .plugin_acknowledgement_admin {
     nav {
         box-sizing: border-box;
@@ -16,34 +19,67 @@
     }
 }
 
+// Neutral wrapper: the AJAX response fills this with one or two separate boxes
 .plugin-acknowledge-banner {
-    @check-ok-color: #355723;
-    @check-needed-color: #840705;
+    display: block;
 
-    display: inline-block;
-    padding: 1em 0.2em;
-    border: 1px solid #000;
-
-    svg {
-        width: 48px;
-        height: 48px;
-        fill: @check-ok-color;
+    // keep the boxes from touching when both are shown
+    .plugin-acknowledge-box + .plugin-acknowledge-box {
+        margin-top: 1em;
     }
+}
 
-    div {
+.plugin-acknowledge-box {
+    // table is block-level (so boxes stack vertically) but shrinks to its
+    // content width instead of filling the full page width
+    display: table;
+    padding: 1.2em 1.5em;
+    border: 1px solid @ini_border;
+    border-radius: 4px;
+    background-color: @ini_background_alt;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    // icon column / content column sit side by side
+    > .ack-icon,
+    > .content {
         display: table-cell;
         vertical-align: top;
+    }
+
+    > .ack-icon {
         padding-right: .8em;
     }
 
-    div.noack {
-        svg {
-            fill: @check-needed-color;
-        }
+    .ack-icon svg {
+        fill: @check-needed-color;
+    }
+
+    &.done .ack-icon svg {
+        fill: @check-ok-color;
+    }
+
+    &.report .ack-icon svg {
+        fill: @ini_text;
+    }
+}
+
+// personal acknowledgement banner
+.plugin-acknowledge-box.ack {
+    .ack-icon svg {
+        width: 48px;
+        height: 48px;
     }
 
     label {
         margin-top: 1em;
         display: block;
+    }
+}
+
+// manager/admin report
+.plugin-acknowledge-box.report {
+    .ack-icon svg {
+        width: 1.5em;
+        height: 1.5em;
     }
 }

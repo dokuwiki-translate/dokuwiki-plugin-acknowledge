@@ -82,21 +82,35 @@ class action_plugin_acknowledge_ajax extends ActionPlugin
     }
 
     /**
-     * Returns the acknowledgment form/confirmation
+     * Returns the acknowledgment form/confirmation and optionally management report
      *
      * @return string The HTML to display
      */
     protected function html()
     {
         global $INPUT;
-        global $USERINFO;
         $id = $INPUT->str('id');
-        $ackSubmitted = $INPUT->bool('ack');
         $user = $INPUT->server->str('REMOTE_USER');
         if ($id === '' || $user === '') return '';
 
         /** @var helper_plugin_acknowledge $helper */
         $helper = plugin_load('helper', 'acknowledge');
+
+        return $this->bannerHtml($id, $user, $helper) . $this->reportHtml($id, $helper);
+    }
+
+    /**
+     * Returns the personal acknowledgement banner
+     *
+     * @param string $id
+     * @param string $user
+     * @param helper_plugin_acknowledge $helper
+     * @return string
+     */
+    protected function bannerHtml($id, $user, helper_plugin_acknowledge $helper)
+    {
+        global $INPUT;
+        global $USERINFO;
 
         // only display for users assigned to the page
         if (!$helper->isUserAssigned($id, $user, $USERINFO['grps'])) {
@@ -108,25 +122,24 @@ class action_plugin_acknowledge_ajax extends ActionPlugin
             return '';
         }
 
-        if ($ackSubmitted) {
+        if ($INPUT->bool('ack')) {
             $helper->saveAcknowledgement($id, $user);
         }
 
         $ack = $helper->hasUserAcknowledged($id, $user);
 
-        $html = '<div class="' . ($ack ? 'ack' : 'noack') . '">';
+        $html = '<div class="plugin-acknowledge-box ack' . ($ack ? ' done' : '') . '">';
+        $html .= '<div class="ack-icon">';
         $html .= inlineSVG(__DIR__ . '/../admin.svg');
         $html .= '</div>';
 
+        $html .= '<div class="content">';
         if ($ack) {
-            $html .= '<div>';
             $html .= '<h4>';
             $html .= $this->getLang('ackOk');
             $html .= '</h4>';
             $html .= sprintf($this->getLang('ackGranted'), dformat($ack));
-            $html .= '</div>';
         } else {
-            $html .= '<div>';
             $html .= '<h4>' . $this->getLang('ackRequired') . '</h4>';
             $latest = $helper->getLatestUserAcknowledgement($id, $user);
             if ($latest) {
@@ -145,8 +158,79 @@ class action_plugin_acknowledge_ajax extends ActionPlugin
             );
 
             $html .= $form->toHTML();
-            $html .= '</div>';
         }
+        $html .= '</div>'; // content
+        $html .= '</div>'; // box
+
+        return $html;
+    }
+
+    /**
+     * Returns the manager/admin report box
+     *
+     * @param string $id
+     * @param helper_plugin_acknowledge $helper
+     * @return string
+     */
+    protected function reportHtml($id, helper_plugin_acknowledge $helper)
+    {
+        $mode = $this->getConf('onpage_report');
+        if ($mode === 'off') return '';
+
+        if (!auth_ismanager()) return '';
+
+        if (!$helper->getPageAssignees($id)) return '';
+
+        $html = '<div class="plugin-acknowledge-box report">';
+
+        $html .= '<div class="ack-icon">';
+        $html .= inlineSVG(__DIR__ . '/../admin.svg');
+        $html .= '</div>';
+
+        $html .= '<div class="content">';
+        $html .= '<h3>' . $this->getLang('reportTitle') . '</h3>';
+
+        if ($mode === 'acknowledged' || $mode === 'both') {
+            $acked = $helper->getPageAcknowledgements($id, '', 'current');
+            $html .= '<h4>' . $this->getLang('reportAcknowledgedTitle') . '</h4>';
+            $html .= $this->userListHtml($acked);
+        }
+
+        if ($mode === 'pending' || $mode === 'both') {
+            $pending = $helper->getPageAcknowledgements($id, '', 'due');
+            $html .= '<h4>' . $this->getLang('reportPendingTitle') . '</h4>';
+            $html .= $this->userListHtml($pending);
+        }
+
+        $html .= '</div>'; // content
+        $html .= '</div>'; // box
+
+        return $html;
+    }
+
+    /**
+     * Renders a list of users from acknowledgement records.
+     *
+     * @param array $rows
+     * @return string
+     */
+    protected function userListHtml($rows)
+    {
+        if (!$rows) {
+            return '<p>' . $this->getLang('reportNobody') . '</p>';
+        }
+
+        $html = '<ul>';
+        foreach ($rows as $row) {
+            $html .= '<li>';
+            $html .= userlink($row['user']);
+
+            if (!empty($row['ack'])) {
+                $html .= ' ' . $this->getLang('reportAckedOn') . ' ' . hsc(dformat($row['ack']));
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
 
         return $html;
     }
